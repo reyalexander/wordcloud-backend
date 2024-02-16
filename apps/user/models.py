@@ -4,10 +4,16 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 class UserManager(BaseUserManager):
     '''Interfaz que proporcionan las operaciones de consulta de la base de datos para Usuarios'''
-    def create_user(self, username, first_name, last_name, password=None):
+    def create_user(self, username, first_name, last_name):
         '''función para crear usuarios'''
-        user = self.model(username=username,first_name=first_name,last_name=last_name)
-        user.save()
+        if not username:
+            raise ValueError('El campo username es obligatorio')
+        user = self.model(
+            username=username,
+            first_name=first_name,
+            last_name=last_name
+        )
+        user.save(using=self._db)
         return user
 
     def create_superuser(self, username, first_name, last_name, password):
@@ -15,13 +21,12 @@ class UserManager(BaseUserManager):
         user = self.create_user(
             username=username,
             first_name=first_name,
-            last_name=last_name,
-            password=password
+            last_name=last_name
         )
-        user.is_admin = True
         user.is_staff = True
         user.is_superuser = True
-        user.save()
+        user.set_password(password)
+        user.save(using=self._db)
         return user
 
 
@@ -31,9 +36,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         (2, 'Inactivo'),
         (3, 'Eliminado'),
     )
+    password = models.CharField(max_length=128, blank=True, null=True)
     username = models.CharField(unique=True, max_length=15, blank=True, null=True)
     first_name = models.CharField(blank=False,max_length=32,verbose_name='nombres') # nombres completos
     last_name = models.CharField(blank=False,max_length=32,verbose_name='apellidos') # apellidos completos
+    is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(blank=True,default=False,verbose_name='super administrador')
     # estado de super administrador del usuario
     is_staff = models.BooleanField(default=False)
